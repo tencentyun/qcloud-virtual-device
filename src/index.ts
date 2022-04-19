@@ -2,6 +2,8 @@ export interface Options {
   host?: string
 }
 
+export { MqttClient } from './mqttClient';
+
 // TODO: Implement module
 export default (name: string, options?: Options): string => {
   if (typeof name !== 'string') {
