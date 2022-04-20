@@ -35,13 +35,13 @@ export class MqttClient extends EventEmitter {
     return `$thing/up/property/${this.productId}/${this.deviceName}`
   }
   get eventDownTopic() {
-    return `$thing/down/property/${this.productId}/${this.deviceName}`
+    return `$thing/down/event/${this.productId}/${this.deviceName}`
   }
   get actionDownTopic() {
-    return `$thing/down/property/${this.productId}/${this.deviceName}`
+    return `$thing/down/action/${this.productId}/${this.deviceName}`
   }
   get actionUpTopic() {
-    return `$thing/up/property/${this.productId}/${this.deviceName}`
+    return `$thing/up/action/${this.productId}/${this.deviceName}`
   }
 
   connect() {
@@ -52,17 +52,23 @@ export class MqttClient extends EventEmitter {
         password,
         reconnectPeriod: 10000
     });
-    client.on('connect', () => {
+    client.on('connect', (params) => {
       client.subscribe(this.propDownTopic);
       client.subscribe(this.eventDownTopic);
       client.subscribe(this.actionDownTopic);
-
+      this.emit('connect', params);
       client.on('message', (topic, payload) => {
         console.log('message coming:', topic, payload.toString());
         const { method, clientToken, params, ...others } = JSON.parse(payload.toString());
         switch (method) {
           case 'control':
             this.emit('control', {clientToken, params});
+            break;
+          case 'action':
+            this.emit('action', { clientToken, params });
+            break;
+          case 'event_reply':
+            this.emit('event_reply', { clientToken, params });
             break;
           default:
             console.warn('unknown property method:', method, params, others);
