@@ -16,8 +16,7 @@
     "test": "tsdx test",
     "lint": "tsdx lint",
     "prepare": "tsdx build",
-    "size": "size-limit",
-    "analyze": "size-limit --why"
+    "demo": "nodemon demo/index"
   },
   "peerDependencies": {},
   "husky": {
@@ -48,6 +47,7 @@
     "@size-limit/preset-small-lib": "^7.0.8",
     "@types/crypto-js": "^4.1.1",
     "husky": "^7.0.4",
+    "nodemon": "^2.0.15",
     "size-limit": "^7.0.8",
     "tsdx": "^0.14.1",
     "tslib": "^2.3.1",

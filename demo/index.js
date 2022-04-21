@@ -32,7 +32,17 @@ device.onControl(({ deviceToken, params }) => {
   device.reportProperty(deviceToken, params);
 });
 
+device.onAction('wake_up', ({ clientToken }) => {
+  console.log('receive wake_up ', payload);
+  device.replyAction({
+    actionId: 'wake_up',
+    clientToken,
+    response: { wakeup_state: 1 }
+  })
+});
+
 device.on('connect', () => {
+  console.log('connected');
   device.reportProperty('123456', {
     users,
   });

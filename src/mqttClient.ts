@@ -9,6 +9,12 @@ interface ReplyBody {
   response?: any;
 }
 
+interface ActionReplyBody extends ReplyBody {
+  clientToken: string;
+  actionId: string;
+  timestamp: number;
+}
+
 
 // 物模型协议 https://cloud.tencent.com/document/product/1081/34916
 export class MqttClient extends EventEmitter {
@@ -59,29 +65,30 @@ export class MqttClient extends EventEmitter {
       this.emit('connect', params);
       client.on('message', (topic, payload) => {
         console.log('message coming:', topic, payload.toString());
-        const { method, clientToken, params, ...others } = JSON.parse(payload.toString());
+        const { method, ...others } = JSON.parse(payload.toString());
         switch (method) {
           case 'control':
-            this.emit('control', {clientToken, params});
+            this.emit('control', others);
             break;
           case 'action':
-            this.emit('action', { clientToken, params });
+            this.emit('action', others);
             break;
           case 'event_reply':
-            this.emit('event_reply', { clientToken, params });
+            this.emit('event_reply', others);
             break;
           default:
-            console.warn('unknown property method:', method, params, others);
+            console.warn('unknown property method:', method, others);
         }
       })
     })
     this.client = client;
   }
 
-  onAction(actionId: string, callback: () => {}) {
-    console.log(actionId, callback);
-    this.on(this.actionDownTopic, () => {
-
+  onAction(actionId: string, callback: (payload: any) => {}) {
+    this.on('action', ({ actionId: downActionId,  ...others}) => {
+      if (actionId === downActionId) {
+        callback(others);
+      }
     })
   }
 
@@ -120,10 +127,14 @@ export class MqttClient extends EventEmitter {
     }));
   }
 
-  replyAction() {
+  replyAction({actionId, clientToken, response, code = 0, timestamp = Date.now() }: ActionReplyBody ) {
     this.client?.publish(this.actionUpTopic, JSON.stringify({
-      code: 0,
-
-    }))
+      code,
+      method: 'action_reply',
+      actionId,
+      timestamp,
+      clientToken,
+      response,
+    }));
   }
 }
