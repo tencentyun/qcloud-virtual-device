@@ -33,7 +33,7 @@ interface StatusParams{
 
 
 // 物模型协议 https://cloud.tencent.com/document/product/1081/34916
-export class MqttClient extends EventEmitter {
+export class VirtualDevice extends EventEmitter {
   productId: string;
   deviceName: string;
   deviceSecret: string;

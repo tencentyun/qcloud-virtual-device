@@ -30,7 +30,7 @@
     "singleQuote": true,
     "trailingComma": "es5"
   },
-  "name": "qcloud-v-d",
+  "name": "qcloud-virtual-device",
   "author": "shuaisguo",
   "module": "dist/qcloud-v-d.esm.js",
   "size-limit": [

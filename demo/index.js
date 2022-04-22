@@ -1,8 +1,8 @@
-const { MqttClient } = require('../dist');
+const { VirtualDevice } = require('../dist');
 
 let deviceData;
 
-const device = new MqttClient({
+const device = new VirtualDevice({
   productId: 'HF8P6QKAPM',
   deviceName: 'NODERED2',
   deviceSecret: 'tjxRXYxlziq+JuH6FXybYw==',
