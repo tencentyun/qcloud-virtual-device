@@ -1,6 +1,7 @@
 import * as mqtt from 'mqtt';
 import onSign from './utils/onSign';
 import EventEmitter from 'events';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ReplyBody {
   code: number;
@@ -13,6 +14,13 @@ interface ActionReplyBody extends ReplyBody {
   clientToken: string;
   actionId: string;
   timestamp: number;
+}
+
+interface EventBody {
+  type: 'info' | 'fault' | 'warn';
+  clientToken?: string;
+  eventId: string;
+  params: any;
 }
 
 
@@ -42,6 +50,9 @@ export class MqttClient extends EventEmitter {
   }
   get eventDownTopic() {
     return `$thing/down/event/${this.productId}/${this.deviceName}`
+  }
+  get eventUpTopic() {
+    return `$thing/up/event/${this.productId}/${this.deviceName}`
   }
   get actionDownTopic() {
     return `$thing/down/action/${this.productId}/${this.deviceName}`
@@ -80,6 +91,10 @@ export class MqttClient extends EventEmitter {
             console.warn('unknown property method:', method, others);
         }
       })
+      client.on('error', (err) => {
+        console.error('mqtt client err', err);
+        this.emit('error', err);
+      })
     })
     this.client = client;
   }
@@ -107,8 +122,14 @@ export class MqttClient extends EventEmitter {
     return () => this.off('control', callback);
   }
 
-  publishEvent() {
-
+  postEvent({ eventId, clientToken, params, type }: EventBody) {
+    this.client?.publish(this.eventUpTopic, JSON.stringify({
+      method: 'event_post',
+      clientToken: clientToken || uuidv4(),
+      eventId,
+      params,
+      type
+    }))
   }
 
   replyControl(clientToken: string, payload: ReplyBody) {
@@ -129,8 +150,8 @@ export class MqttClient extends EventEmitter {
 
   replyAction({actionId, clientToken, response, code = 0, timestamp = Date.now() }: ActionReplyBody ) {
     this.client?.publish(this.actionUpTopic, JSON.stringify({
-      code,
       method: 'action_reply',
+      code,
       actionId,
       timestamp,
       clientToken,
