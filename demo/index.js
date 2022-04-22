@@ -24,9 +24,9 @@ device.onAction('wake_up', ({ clientToken }) => {
 
 device.onAction('add_user', ({ clientToken, params }) => {
   console.log('receive add_user ', params);
-  users.push(params);
+  deviceData.users.push(params);
   device.reportProperty('234567', {
-    users,
+    users: deviceData.users,
   });
   device.replyAction({
     actionId: 'add_user',
@@ -35,12 +35,29 @@ device.onAction('add_user', ({ clientToken, params }) => {
   })
 });
 
+device.onAction('edit_user', ({ clientToken, params }, reply) => {
+  console.log('receive edit_user ', params);
+  const index = deviceData.users.findIndex(user => user.userid = params.userid);
+  deviceData.users = [...deviceData.users.slice(0, index), params, ...deviceData.users.slice(index + 1)];
+  device.reportProperty('234567', {
+    users: deviceData.users,
+  });
+  reply({ result: 1 });
+});
+
+device.onAction('unlock_remote', ({ clientToken, params }, reply) => {
+  device.reportProperty('234567', {
+    lock_motor_state: 0,
+  });
+  reply({ result: 1 });
+});
+
 device.onAction('add_fingerprint', ({ clientToken, params }, reply) => {
   console.log('add_fingerprint params', params);
-  const finger = {id: '1234', ...params};
-  fingerprints.push(finger);
+  const finger = {id: device.clientToken(), ...params};
+  deviceData.fingerprints.push(finger);
   device.reportProperty('345678', {
-    fingerprints: [{id: '1234', ...params}]
+    fingerprints: [...deviceData.fingerprints]
   })
   device.postEvent({
     eventId: 'add_fingerprint_result',

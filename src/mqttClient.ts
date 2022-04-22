@@ -181,6 +181,10 @@ export class MqttClient extends EventEmitter {
     }))
   }
 
+  clientToken() {
+    return uuidv4();
+  }
+
   replyControl(clientToken: string, payload: ReplyBody) {
     this.client?.publish(this.propUpTopic, JSON.stringify({
       method: 'control_reply',
