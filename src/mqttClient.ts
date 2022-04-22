@@ -2,7 +2,7 @@ import * as mqtt from 'mqtt';
 import onSign from './utils/onSign';
 import EventEmitter from 'events';
 import { v4 as uuidv4 } from 'uuid';
-
+import dayjs from 'dayjs';
 interface ReplyBody {
   code: number;
   status: string;
@@ -10,10 +10,13 @@ interface ReplyBody {
   response?: any;
 }
 
-interface ActionReplyBody extends ReplyBody {
+interface ActionReplyBody {
+  code?: number;
+  status?: string;
   clientToken: string;
   actionId: string;
-  timestamp: number;
+  response: any;
+  timestamp?: number;
 }
 
 interface EventBody {
@@ -23,6 +26,11 @@ interface EventBody {
   params: any;
 }
 
+interface StatusParams{
+  type : string;
+  showmeta?: number;
+}
+
 
 // 物模型协议 https://cloud.tencent.com/document/product/1081/34916
 export class MqttClient extends EventEmitter {
@@ -30,6 +38,7 @@ export class MqttClient extends EventEmitter {
   deviceName: string;
   deviceSecret: string;
   client: mqtt.MqttClient | null = null;
+  private promisePool: Map<string, any>
 
   constructor({productId, deviceName, deviceSecret }: {
     productId: string;
@@ -40,6 +49,7 @@ export class MqttClient extends EventEmitter {
     this.productId = productId;
     this.deviceName = deviceName;
     this.deviceSecret = deviceSecret;
+    this.promisePool = new Map();
   }
 
   get propDownTopic() {
@@ -87,6 +97,12 @@ export class MqttClient extends EventEmitter {
           case 'event_reply':
             this.emit('event_reply', others);
             break;
+          case 'report_reply':
+            this.emit('report_reply', others);
+            break;
+          case 'get_status_reply':
+            this.emit('get_status_reply', others);
+            break;
           default:
             console.warn('unknown property method:', method, others);
         }
@@ -99,10 +115,17 @@ export class MqttClient extends EventEmitter {
     this.client = client;
   }
 
-  onAction(actionId: string, callback: (payload: any) => {}) {
-    this.on('action', ({ actionId: downActionId,  ...others}) => {
+  onAction(actionId: string, callback: (payload: any, reply: (response: any) => void) => {}) {
+    this.on('action', ({ actionId: downActionId, clientToken,  ...others}) => {
+      const reply = (response: any) => {
+        this.replyAction({
+          actionId,
+          clientToken,
+          response,
+        })
+      }
       if (actionId === downActionId) {
-        callback(others);
+        callback({ clientToken,  ...others }, reply);
       }
     })
   }
@@ -114,6 +137,32 @@ export class MqttClient extends EventEmitter {
   onProperty(callback: () => {}) {
     console.log(callback);
     this.on(this.propDownTopic, callback);
+  }
+
+  async getStatus(params: StatusParams) {
+    const clientToken = uuidv4();
+    const promise = new Promise((resolve, reject) => {
+      this.promisePool.set(clientToken, [resolve, reject]);
+    });
+    const handler = (data: any) => {
+      console.log('get_status_reply', data);
+      if (data.clientToken === clientToken) {
+        const [resolve, reject] = this.promisePool.get(clientToken);
+        if (data.code === 0) {
+          resolve(data);
+        } else {
+          reject(data);
+        }
+      }
+      this.off('get_status_reply', handler);
+    }
+    this.on('get_status_reply', handler);
+    this.client?.publish(this.propUpTopic, JSON.stringify({
+      method: 'get_status',
+      clientToken,
+      ...params,
+    }))
+    return promise;
   }
 
   onControl(callback: (payload: { clientToken: string, params: any }) => {}) {
@@ -144,8 +193,13 @@ export class MqttClient extends EventEmitter {
     this.client?.publish(this.propUpTopic, JSON.stringify({
       method: 'report',
       clientToken,
+      timestamp: dayjs().unix(),
       params: payload
     }));
+  }
+
+  onReportReply(callback: (paramas: any) => void) {
+    this.on('report_reply', callback);
   }
 
   replyAction({actionId, clientToken, response, code = 0, timestamp = Date.now() }: ActionReplyBody ) {

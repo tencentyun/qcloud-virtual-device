@@ -1,25 +1,6 @@
 const { MqttClient } = require('../dist');
 
-const users = [
-  {
-    cards: JSON.stringify([{ name: '指纹1' }]),
-    effectiveTime: JSON.stringify({
-      beginDate: '2022/04/13',
-      beginTime: '00:00',
-      endDate: '2022/04/13',
-      endTime: '23:59',
-      type: 1,
-      week: [0, 1, 2, 5, 6],
-    }),
-    faces: JSON.stringify([{ name: '指纹1' }, { name: '指纹1' }]),
-    fingerPrints: JSON.stringify([{ name: '指纹1' }, { name: '指纹1' }]),
-    id: '4DPPzCAbr',
-    name: 'bob2',
-    passwords: JSON.stringify([{ name: '指纹1' }, { name: '指纹1' }, { name: '指纹1' }]),
-  },
-  { id: 'cK4fxfrp8', name: 'eric' },
-  { id: 'MgYWAkGeY', name: 'will' },
-];
+let deviceData;
 
 const device = new MqttClient({
   productId: 'HF8P6QKAPM',
@@ -27,9 +8,9 @@ const device = new MqttClient({
   deviceSecret: 'tjxRXYxlziq+JuH6FXybYw==',
 });
 
-device.onControl(({ deviceToken, params }) => {
+device.onControl(({ clientToken, params }) => {
   console.log('property change', params);
-  device.reportProperty(deviceToken, params);
+  device.reportProperty(clientToken, params);
 });
 
 device.onAction('wake_up', ({ clientToken }) => {
@@ -41,11 +22,47 @@ device.onAction('wake_up', ({ clientToken }) => {
   })
 });
 
-device.on('connect', () => {
-  console.log('connected');
-  device.reportProperty('123456', {
+device.onAction('add_user', ({ clientToken, params }) => {
+  console.log('receive add_user ', params);
+  users.push(params);
+  device.reportProperty('234567', {
     users,
   });
+  device.replyAction({
+    actionId: 'add_user',
+    clientToken,
+    response: { result: 1 }
+  })
+});
+
+device.onAction('add_fingerprint', ({ clientToken, params }, reply) => {
+  console.log('add_fingerprint params', params);
+  const finger = {id: '1234', ...params};
+  fingerprints.push(finger);
+  device.reportProperty('345678', {
+    fingerprints: [{id: '1234', ...params}]
+  })
+  device.postEvent({
+    eventId: 'add_fingerprint_result',
+    type: 'info',
+    clientToken,
+    params: {result: 1, ...finger}
+  });
+  reply({ result: 1 });
+});
+
+device.on('connect', () => {
+  console.log('connected');
+  device.onReportReply(console.log);
+  device.getStatus({
+    type: 'report'
+  }).then((v) => {
+    deviceData = v.data.reported;
+    console.log('deviceData', deviceData);
+  });
+  // device.reportProperty('123456', {
+  //   users,
+  // });
 });
 
 device.connect();
