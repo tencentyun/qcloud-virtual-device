@@ -12,8 +12,7 @@ npm i qcloud-virtual-device # yarn add qcloud-virtual-device
 ```js
 const { VirtualDevice } = require('qcloud-virtual-device');
 
-// 传入设备三元组信息，自动连接物联网平台
-
+// 传入设备三元组信息，实例化一个device
 const device = new VirtualDevice({
   productId: 'your_productId',
   deviceName: 'your_device_name',
@@ -29,8 +28,38 @@ device.on('connect', () => {
     console.log('deviceData', deviceData);
   });
 });
+
+// 连接到云端
+device.connect();
 ```
+完整例子可以参看[demo](./demo/index.js);
 
 ## API
 
-### reportProperty
+### device.clientToken()
+
+生成一个clientToken， 用于消息上报和消息响应的配对
+```ts
+clientToken(): string;
+```
+
+### device.connect(url?: string)
+
+将虚拟设备连接到云端， 默认使用`mqtt://${productId}.iotcloud.tencentdevices.com`作为mqtt URL，
+```ts
+connect(url?: string): mqtt.MqttClient;
+```
+
+
+### device.reportProperty(payload)
+
+设备往云端上报属性，返回一个Promise，可以拿到`report_reply`中的消息来判断是否上报成功
+```ts
+reportProperty(payload: Record<string, any>): Promise;
+```
+
+### device.postEvent(payload)
+发送一个事件到云端
+### device.replyAction(payload)
+
+对小程序的action指令进行回复

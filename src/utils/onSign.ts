@@ -10,7 +10,7 @@ function randomString(len: number) {
   return randomString;
 }
 
-function onSign(productId:string, deviceName: string, deviceSecret: string) {
+function onSign(productId: string, deviceName: string, deviceSecret: string) {
   // 1. 生成 connid 为一个随机字符串，方便后台定位问题
   const connid = randomString(5);
   // 2. 生成过期时间，表示签名的过期时间,从纪元1970年1月1日 00:00:00 UTC 时间至今秒数的 UTF8 字符串
@@ -29,6 +29,5 @@ function onSign(productId:string, deviceName: string, deviceSecret: string) {
     password,
   };
 }
-
 
 export default onSign;

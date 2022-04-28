@@ -3,6 +3,7 @@ import onSign from './utils/onSign';
 import EventEmitter from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
+
 interface ReplyBody {
   code: number;
   status: string;
@@ -26,11 +27,10 @@ interface EventBody {
   params: any;
 }
 
-interface StatusParams{
-  type : string;
+interface StatusParams {
+  type: string;
   showmeta?: number;
 }
-
 
 // 物模型协议 https://cloud.tencent.com/document/product/1081/34916
 export class VirtualDevice extends EventEmitter {
@@ -38,9 +38,13 @@ export class VirtualDevice extends EventEmitter {
   deviceName: string;
   deviceSecret: string;
   client: mqtt.MqttClient | null = null;
-  private promisePool: Map<string, any>
+  private promisePool: Map<string, any>;
 
-  constructor({productId, deviceName, deviceSecret }: {
+  constructor({
+    productId,
+    deviceName,
+    deviceSecret,
+  }: {
     productId: string;
     deviceName: string;
     deviceSecret: string;
@@ -53,81 +57,94 @@ export class VirtualDevice extends EventEmitter {
   }
 
   get propDownTopic() {
-    return `$thing/down/property/${this.productId}/${this.deviceName}`
+    return `$thing/down/property/${this.productId}/${this.deviceName}`;
   }
   get propUpTopic() {
-    return `$thing/up/property/${this.productId}/${this.deviceName}`
+    return `$thing/up/property/${this.productId}/${this.deviceName}`;
   }
   get eventDownTopic() {
-    return `$thing/down/event/${this.productId}/${this.deviceName}`
+    return `$thing/down/event/${this.productId}/${this.deviceName}`;
   }
   get eventUpTopic() {
-    return `$thing/up/event/${this.productId}/${this.deviceName}`
+    return `$thing/up/event/${this.productId}/${this.deviceName}`;
   }
   get actionDownTopic() {
-    return `$thing/down/action/${this.productId}/${this.deviceName}`
+    return `$thing/down/action/${this.productId}/${this.deviceName}`;
   }
   get actionUpTopic() {
-    return `$thing/up/action/${this.productId}/${this.deviceName}`
+    return `$thing/up/action/${this.productId}/${this.deviceName}`;
   }
 
-  connect() {
-    const mqttUrl = `mqtt://${this.productId}.iotcloud.tencentdevices.com`;
-    const { username, password } = onSign(this.productId, this.deviceName, this.deviceSecret);
+  connect(url?: string) {
+    const mqttUrl =
+      url || `mqtt://${this.productId}.iotcloud.tencentdevices.com`;
+    const { username, password } = onSign(
+      this.productId,
+      this.deviceName,
+      this.deviceSecret
+    );
     const client = mqtt.connect(mqttUrl, {
-        username,
-        password,
-        reconnectPeriod: 10000
+      username,
+      password,
+      reconnectPeriod: 10000,
     });
-    client.on('connect', (params) => {
+    client.on('connect', params => {
       client.subscribe(this.propDownTopic);
       client.subscribe(this.eventDownTopic);
       client.subscribe(this.actionDownTopic);
       this.emit('connect', params);
       client.on('message', (topic, payload) => {
         console.log('message coming:', topic, payload.toString());
-        const { method, ...others } = JSON.parse(payload.toString());
-        switch (method) {
-          case 'control':
-            this.emit('control', others);
-            break;
-          case 'action':
-            this.emit('action', others);
-            break;
-          case 'event_reply':
-            this.emit('event_reply', others);
-            break;
-          case 'report_reply':
-            this.emit('report_reply', others);
-            break;
-          case 'get_status_reply':
-            this.emit('get_status_reply', others);
-            break;
-          default:
-            console.warn('unknown property method:', method, others);
+        try {
+          const { method, ...others } = JSON.parse(payload.toString());
+          switch (method) {
+            case 'control':
+              this.emit('control', others);
+              break;
+            case 'action':
+              this.emit('action', others);
+              break;
+            case 'event_reply':
+              this.emit('event_reply', others);
+              break;
+            case 'report_reply':
+              this.emit('report_reply', others);
+              break;
+            case 'get_status_reply':
+              this.emit('get_status_reply', others);
+              break;
+            default:
+              console.warn('unknown property method:', method, others);
+          }
+        } catch (err) {
+          console.warn('parse message failed', payload.toString());
         }
-      })
-      client.on('error', (err) => {
+      });
+      client.on('error', err => {
         console.error('mqtt client err', err);
         this.emit('error', err);
-      })
-    })
+      });
+    });
     this.client = client;
+    return client;
   }
 
-  onAction(actionId: string, callback: (payload: any, reply: (response: any) => void) => {}) {
-    this.on('action', ({ actionId: downActionId, clientToken,  ...others}) => {
+  onAction(
+    actionId: string,
+    callback: (payload: any, reply: (response: any) => void) => {}
+  ) {
+    this.on('action', ({ actionId: downActionId, clientToken, ...others }) => {
       const reply = (response: any) => {
         this.replyAction({
           actionId,
           clientToken,
           response,
-        })
-      }
+        });
+      };
       if (actionId === downActionId) {
-        callback({ clientToken,  ...others }, reply);
+        callback({ clientToken, ...others }, reply);
       }
-    })
+    });
   }
 
   onEvent(eventId: string, callback: () => {}) {
@@ -145,7 +162,6 @@ export class VirtualDevice extends EventEmitter {
       this.promisePool.set(clientToken, [resolve, reject]);
     });
     const handler = (data: any) => {
-      console.log('get_status_reply', data);
       if (data.clientToken === clientToken) {
         const [resolve, reject] = this.promisePool.get(clientToken);
         if (data.code === 0) {
@@ -155,30 +171,35 @@ export class VirtualDevice extends EventEmitter {
         }
       }
       this.off('get_status_reply', handler);
-    }
+    };
     this.on('get_status_reply', handler);
-    this.client?.publish(this.propUpTopic, JSON.stringify({
-      method: 'get_status',
-      clientToken,
-      ...params,
-    }))
+    this.client?.publish(
+      this.propUpTopic,
+      JSON.stringify({
+        method: 'get_status',
+        clientToken,
+        ...params,
+      })
+    );
     return promise;
   }
 
-  onControl(callback: (payload: { clientToken: string, params: any }) => {}) {
-    console.log(callback);
+  onControl(callback: (payload: { clientToken: string; params: any }) => {}) {
     this.on('control', callback);
     return () => this.off('control', callback);
   }
 
-  postEvent({ eventId, clientToken, params, type }: EventBody) {
-    this.client?.publish(this.eventUpTopic, JSON.stringify({
-      method: 'event_post',
-      clientToken: clientToken || uuidv4(),
-      eventId,
-      params,
-      type
-    }))
+  postEvent({ eventId, params, type }: EventBody) {
+    this.client?.publish(
+      this.eventUpTopic,
+      JSON.stringify({
+        method: 'event_post',
+        clientToken: this.clientToken(),
+        eventId,
+        params,
+        type,
+      })
+    );
   }
 
   clientToken() {
@@ -186,34 +207,63 @@ export class VirtualDevice extends EventEmitter {
   }
 
   replyControl(clientToken: string, payload: ReplyBody) {
-    this.client?.publish(this.propUpTopic, JSON.stringify({
-      method: 'control_reply',
-      clientToken,
-      ...payload
-    }));
-  } 
+    this.client?.publish(
+      this.propUpTopic,
+      JSON.stringify({
+        method: 'control_reply',
+        clientToken,
+        ...payload,
+      })
+    );
+  }
 
-  reportProperty(clientToken: string, payload: Record<string, any>) {
-    this.client?.publish(this.propUpTopic, JSON.stringify({
-      method: 'report',
-      clientToken,
-      timestamp: dayjs().unix(),
-      params: payload
-    }));
+  reportProperty(payload: Record<string, any>) {
+    return new Promise((resolve, reject) => {
+      const clientToken = this.clientToken();
+      const off = this.onReportReply(reply => {
+        if (reply.clientToken === clientToken) {
+          if (reply.code === 0) {
+            resolve(reply);
+          } else {
+            reject(reply);
+          }
+          off();
+        }
+      });
+      this.client?.publish(
+        this.propUpTopic,
+        JSON.stringify({
+          method: 'report',
+          clientToken: clientToken,
+          timestamp: dayjs().unix(),
+          params: payload,
+        })
+      );
+    });
   }
 
   onReportReply(callback: (paramas: any) => void) {
     this.on('report_reply', callback);
+    return () => this.off('report_reply', callback);
   }
 
-  replyAction({actionId, clientToken, response, code = 0, timestamp = Date.now() }: ActionReplyBody ) {
-    this.client?.publish(this.actionUpTopic, JSON.stringify({
-      method: 'action_reply',
-      code,
-      actionId,
-      timestamp,
-      clientToken,
-      response,
-    }));
+  replyAction({
+    actionId,
+    clientToken,
+    response,
+    code = 0,
+    timestamp = Date.now(),
+  }: ActionReplyBody) {
+    this.client?.publish(
+      this.actionUpTopic,
+      JSON.stringify({
+        method: 'action_reply',
+        code,
+        actionId,
+        timestamp,
+        clientToken,
+        response,
+      })
+    );
   }
 }

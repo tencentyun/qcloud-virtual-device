@@ -3,14 +3,19 @@ const { VirtualDevice } = require('../dist');
 let deviceData;
 
 const device = new VirtualDevice({
-  productId: 'HF8P6QKAPM',
-  deviceName: 'NODERED2',
-  deviceSecret: 'tjxRXYxlziq+JuH6FXybYw==',
+  productId: 'NFN0FXI7Y7',
+  deviceName: 'device2',
+  deviceSecret: 'Awn0cQnO3hSFzY9vTGw4sg==',
 });
 
-device.onControl(({ clientToken, params }) => {
+device.onControl(async ({ clientToken, params }) => {
   console.log('property change', params);
-  device.reportProperty(clientToken, params);
+  try {
+    const res = await device.reportProperty(params);
+    console.log('report success', res);
+  } catch (err) {
+    console.error ('report failed', err);
+  }
 });
 
 device.onAction('wake_up', ({ clientToken }) => {
@@ -39,14 +44,14 @@ device.onAction('edit_user', ({ clientToken, params }, reply) => {
   console.log('receive edit_user ', params);
   const index = deviceData.users.findIndex(user => user.userid = params.userid);
   deviceData.users = [...deviceData.users.slice(0, index), params, ...deviceData.users.slice(index + 1)];
-  device.reportProperty('234567', {
+  device.reportProperty({
     users: deviceData.users,
   });
   reply({ result: 1 });
 });
 
 device.onAction('unlock_remote', ({ clientToken, params }, reply) => {
-  device.reportProperty('234567', {
+  device.reportProperty({
     lock_motor_state: 0,
   });
   reply({ result: 1 });
@@ -56,7 +61,7 @@ device.onAction('add_fingerprint', ({ clientToken, params }, reply) => {
   console.log('add_fingerprint params', params);
   const finger = {id: device.clientToken(), ...params};
   deviceData.fingerprints.push(finger);
-  device.reportProperty('345678', {
+  device.reportProperty({
     fingerprints: [...deviceData.fingerprints]
   })
   device.postEvent({
@@ -70,16 +75,12 @@ device.onAction('add_fingerprint', ({ clientToken, params }, reply) => {
 
 device.on('connect', () => {
   console.log('connected');
-  device.onReportReply(console.log);
   device.getStatus({
     type: 'report'
   }).then((v) => {
     deviceData = v.data.reported;
     console.log('deviceData', deviceData);
   });
-  // device.reportProperty('123456', {
-  //   users,
-  // });
 });
 
 device.connect();
