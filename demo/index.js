@@ -3,9 +3,9 @@ const { VirtualDevice } = require('../dist');
 let deviceData;
 
 const device = new VirtualDevice({
-  productId: 'NFN0FXI7Y7',
-  deviceName: 'device2',
-  deviceSecret: 'Awn0cQnO3hSFzY9vTGw4sg==',
+  productId: 'HF8P6QKAPM',
+  deviceName: 'NODERED2',
+  deviceSecret: 'tjxRXYxlziq+JuH6FXybYw==',
 });
 
 device.onControl(async ({ clientToken, params }) => {
@@ -30,7 +30,7 @@ device.onAction('wake_up', ({ clientToken }) => {
 device.onAction('add_user', ({ clientToken, params }) => {
   console.log('receive add_user ', params);
   deviceData.users.push(params);
-  device.reportProperty('234567', {
+  device.reportProperty({
     users: deviceData.users,
   });
   device.replyAction({
@@ -57,7 +57,7 @@ device.onAction('unlock_remote', ({ clientToken, params }, reply) => {
   reply({ result: 1 });
 });
 
-device.onAction('add_fingerprint', ({ clientToken, params }, reply) => {
+device.onAction('add_fingerprint', ({ params }, reply) => {
   console.log('add_fingerprint params', params);
   const finger = {id: device.clientToken(), ...params};
   deviceData.fingerprints.push(finger);
@@ -67,7 +67,6 @@ device.onAction('add_fingerprint', ({ clientToken, params }, reply) => {
   device.postEvent({
     eventId: 'add_fingerprint_result',
     type: 'info',
-    clientToken,
     params: {result: 1, ...finger}
   });
   reply({ result: 1 });

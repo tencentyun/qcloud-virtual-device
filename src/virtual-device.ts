@@ -75,7 +75,7 @@ export class VirtualDevice extends EventEmitter {
     return `$thing/up/action/${this.productId}/${this.deviceName}`;
   }
 
-  connect(url?: string) {
+  connect(url?: string, options?: Omit<mqtt.IClientOptions, 'username' | 'password'>) {
     const mqttUrl =
       url || `mqtt://${this.productId}.iotcloud.tencentdevices.com`;
     const { username, password } = onSign(
@@ -84,9 +84,10 @@ export class VirtualDevice extends EventEmitter {
       this.deviceSecret
     );
     const client = mqtt.connect(mqttUrl, {
+      reconnectPeriod: 5000,
+      ...options,
       username,
       password,
-      reconnectPeriod: 10000,
     });
     client.on('connect', params => {
       client.subscribe(this.propDownTopic);

@@ -43,12 +43,13 @@ device.connect();
 clientToken(): string;
 ```
 
-### device.connect(url?: string)
+### device.connect(url?: string, options)
 
 将虚拟设备连接到云端， 默认使用`mqtt://${productId}.iotcloud.tencentdevices.com`作为mqtt URL，
 ```ts
-connect(url?: string): mqtt.MqttClient;
+connect(url?: string, options?: Omit<mqtt.IClientOptions, 'username' | 'password'>): mqtt.MqttClient;
 ```
+在 options中可以传入 keepalive, reconnectPeriod等参数，详细介绍可参考： https://github.com/mqttjs/MQTT.js#client
 
 
 ### device.reportProperty(payload)
@@ -62,4 +63,14 @@ reportProperty(payload: Record<string, any>): Promise;
 发送一个事件到云端
 ### device.replyAction(payload)
 
-对小程序的action指令进行回复
+对小程序的action指令进行回复, 通常和 `onAction` 一起使用
+
+```ts
+device.onAction('add_user', ({ clientToken, params }) => {
+  device.replyAction({
+    actionId: 'add_user',
+    clientToken,
+    response: { result: 1 }
+  })
+});
+```
