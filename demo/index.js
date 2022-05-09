@@ -4,7 +4,7 @@ let deviceData;
 
 const device = new VirtualDevice({
   productId: 'HF8P6QKAPM',
-  deviceName: 'NODERED2',
+  deviceName: 'dev3',
   deviceSecret: 'tjxRXYxlziq+JuH6FXybYw==',
 });
 
@@ -80,6 +80,11 @@ device.on('connect', () => {
     deviceData = v.data.reported;
     console.log('deviceData', deviceData);
   });
+  device.reportProperty({
+    lock_motor_state: 1
+  });
 });
+
+device.on('error', console.log);
 
 device.connect();

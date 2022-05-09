@@ -1,5 +1,5 @@
 # qcloud-virtual-device
-qcloud-virtual-device用于模拟一个建立在腾讯云物联网开发平台上的虚拟设备，提供上报属性，事件，响应action等一系列物模型相关的操作。
+qcloud-virtual-device用于模拟一个建立在腾讯云物联网开发平台上的虚拟设备，提供上报属性，事件，响应action等一系列物模型相关的操作。去了解[物模型](https://cloud.tencent.com/document/product/1081/34916)
 
 ## 安装
 
@@ -60,17 +60,40 @@ reportProperty(payload: Record<string, any>): Promise;
 ```
 
 ### device.postEvent(payload)
-发送一个事件到云端
+发送一个物模型事件到云端，可以选`info`, `warn`, `fault`三种事件类型
+
+```ts
+  device.postEvent({
+    eventId: 'open_door',
+    type: 'info',
+    params: {result: 1}
+  });
+
+```
 ### device.replyAction(payload)
 
 对小程序的action指令进行回复, 通常和 `onAction` 一起使用
 
 ```ts
-device.onAction('add_user', ({ clientToken, params }) => {
+device.onAction('add_user', ({ clientToken, params }， reply) => {
+  // ...一系列添加用户的操作
   device.replyAction({
     actionId: 'add_user',
     clientToken,
     response: { result: 1 }
-  })
+  });
+  // 或者直接使用包装好的 reply 参数，并传入 response
+  reply({ result: 1 })
 });
 ```
+
+### device.on('connect', () => {})
+设备连接到云端触发`connect`事件
+
+### device.on('error', (error) => {})
+设备出现错误触发`error`事件
+
+### device.client: mqtt.MqttClient | null
+
+设备连接到云端后，可以通过device.client获得 [mqttClient](https://github.com/mqttjs/MQTT.js#client)
+

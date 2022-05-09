@@ -121,11 +121,16 @@ export class VirtualDevice extends EventEmitter {
           console.warn('parse message failed', payload.toString());
         }
       });
-      client.on('error', err => {
-        console.error('mqtt client err', err);
-        this.emit('error', err);
-      });
     });
+
+    client.on('error', err => {
+      this.emit('error', err);
+    });
+
+    client.on('close', () => {
+      this.emit('close');
+    });
+
     this.client = client;
     return client;
   }
