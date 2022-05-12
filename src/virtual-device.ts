@@ -119,9 +119,10 @@ export class VirtualDevice extends EventEmitter {
               break;
             default:
               console.warn('unknown property method:', method, others);
+              this.emit(method, others);
           }
         } catch (err) {
-          console.warn('parse message failed', payload.toString());
+          console.warn('[handle message error]:', err);
         }
       });
     });
