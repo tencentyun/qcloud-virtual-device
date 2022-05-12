@@ -75,7 +75,10 @@ export class VirtualDevice extends EventEmitter {
     return `$thing/up/action/${this.productId}/${this.deviceName}`;
   }
 
-  connect(url?: string, options?: Omit<mqtt.IClientOptions, 'username' | 'password'>) {
+  connect(
+    url?: string,
+    options?: Omit<mqtt.IClientOptions, 'username' | 'password'>
+  ) {
     const mqttUrl =
       url || `mqtt://${this.productId}.iotcloud.tencentdevices.com`;
     const { username, password } = onSign(

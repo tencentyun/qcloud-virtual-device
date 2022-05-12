@@ -3,6 +3,10 @@
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "keywords": [
+    "qcloud",
+    "IoT"
+  ],
   "files": [
     "dist",
     "src"
@@ -17,7 +21,7 @@
     "test": "tsdx test",
     "lint": "tsdx lint",
     "prepare": "tsdx build",
-    "demo": "nodemon demo/index"
+    "demo": "nodemon  --inspect demo/index"
   },
   "peerDependencies": {},
   "husky": {

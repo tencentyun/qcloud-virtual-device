@@ -32,7 +32,7 @@ device.on('connect', () => {
 // 连接到云端
 device.connect();
 ```
-完整例子可以参看[demo](./demo/index.js);
+完整例子可以参看[demo](https://github.com/tencentyun/qcloud-virtual-device/blob/main/demo/index.js);
 
 ## API
 
@@ -83,7 +83,7 @@ device.onAction('add_user', ({ clientToken, params }， reply) => {
     response: { result: 1 }
   });
   // 或者直接使用包装好的 reply 参数，并传入 response
-  reply({ result: 1 })
+  reply({ result: 1 });
 });
 ```
 
@@ -92,6 +92,17 @@ device.onAction('add_user', ({ clientToken, params }， reply) => {
 
 ### device.on('error', (error) => {})
 设备出现错误触发`error`事件
+
+### device.on('action', ({ actionId, clientToken, timestamp, params}) => {})
+设备收到来自控制端的 action 时触发
+
+### device.onAction(actionId, ({params}, reply) => {})
+
+监听一个特定的action, 在回调函数中，可以通过`params`获取 action 传入的参数，可以通过 reply 对 action 进行回复。
+
+### device.onControl({ clientToken: string; params: any }) => {})
+
+当客户端下发控制指令时触发，回调函数中可以通过 params 获取发生变化的物模型参数
 
 ### device.client: mqtt.MqttClient | null
 
