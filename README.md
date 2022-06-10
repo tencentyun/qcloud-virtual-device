@@ -1,5 +1,5 @@
 # qcloud-virtual-device
-qcloud-virtual-device用于模拟一个建立在腾讯云物联网开发平台上的虚拟设备，提供上报属性，事件，响应action等一系列物模型相关的操作。去了解[物模型](https://cloud.tencent.com/document/product/1081/34916)
+qcloud-virtual-device 用于模拟一个建立在腾讯云物联网开发平台上的虚拟设备，提供上报属性，事件，响应action等一系列物模型相关的操作。去了解[物模型](https://cloud.tencent.com/document/product/1081/34916)
 
 ## 安装
 
