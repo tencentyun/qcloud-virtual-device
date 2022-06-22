@@ -27,6 +27,12 @@ interface EventBody {
   params: any;
 }
 
+export interface DeviceInfo {
+  productId: string;
+  deviceName: string;
+  deviceSecret: string;
+}
+
 interface StatusParams {
   type: string;
   showmeta?: number;
@@ -39,16 +45,11 @@ export class VirtualDevice extends EventEmitter {
   deviceSecret: string;
   client: mqtt.MqttClient | null = null;
   private promisePool: Map<string, any>;
-
   constructor({
     productId,
     deviceName,
     deviceSecret,
-  }: {
-    productId: string;
-    deviceName: string;
-    deviceSecret: string;
-  }) {
+  }: DeviceInfo) {
     super();
     this.productId = productId;
     this.deviceName = deviceName;
@@ -93,12 +94,14 @@ export class VirtualDevice extends EventEmitter {
       password,
     });
     client.on('connect', params => {
+      this.emit('connect', {...params, client});
       client.subscribe(this.propDownTopic);
       client.subscribe(this.eventDownTopic);
       client.subscribe(this.actionDownTopic);
-      this.emit('connect', params);
+
       client.on('message', (topic, payload) => {
         console.log('message coming:', topic, payload.toString());
+        this.emit('message', topic, payload.toString());
         try {
           const { method, ...others } = JSON.parse(payload.toString());
           switch (method) {
@@ -118,8 +121,10 @@ export class VirtualDevice extends EventEmitter {
               this.emit('get_status_reply', others);
               break;
             default:
-              console.warn('unknown property method:', method, others);
-              this.emit(method, others);
+              if (method) {
+                console.warn('unknown property method:', method, others);
+                this.emit(method, others);
+              }
           }
         } catch (err) {
           console.warn('[handle message error]:', err);
@@ -227,7 +232,7 @@ export class VirtualDevice extends EventEmitter {
     );
   }
 
-  reportProperty(payload: Record<string, any>) {
+  reportProperty(payload: Record<string, any>, method: 'report' | 'report_info' = 'report') {
     return new Promise((resolve, reject) => {
       const clientToken = this.clientToken();
       const off = this.onReportReply(reply => {
@@ -243,13 +248,17 @@ export class VirtualDevice extends EventEmitter {
       this.client?.publish(
         this.propUpTopic,
         JSON.stringify({
-          method: 'report',
+          method,
           clientToken: clientToken,
           timestamp: dayjs().unix(),
           params: payload,
         })
       );
     });
+  }
+
+  reportInfo(payload: Record<string, any>) {
+    return this.reportProperty(payload, 'report_info');
   }
 
   onReportReply(callback: (paramas: any) => void) {
