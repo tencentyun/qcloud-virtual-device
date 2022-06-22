@@ -37,11 +37,11 @@ export class GatewayDevice extends VirtualDevice {
   // https://cloud.tencent.com/document/product/634/45960
   bindSubDevice(device: DeviceInfo) {
     console.log('start bind sub devivce', device);
-    const { deviceName, productId } = device;
+    const { deviceName, productId, deviceSecret } = device;
     const time = Math.floor(Date.now() / 1000);
     const rand = random(0, 1000000);
     const message = `${productId}${deviceName};${rand};${time}`;
-    const sign = crypto.HmacSHA1(message, this.deviceSecret);
+    const sign = crypto.HmacSHA1(message, deviceSecret);
 
     console.log(sign.toString(crypto.enc.Base64), message, {
       "product_id": productId,
