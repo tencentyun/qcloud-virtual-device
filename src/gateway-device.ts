@@ -65,29 +65,34 @@ export class GatewayDevice extends VirtualDevice {
   }
 
   // https://cloud.tencent.com/document/product/634/45960
-  bindSubDevice(device: DeviceInfo) {
+  bindSubDevice(device: DeviceInfo, timeout = 3000) {
     const { deviceName, productId, deviceSecret } = device;
     const time = Math.floor(Date.now() / 1000);
     const rand = random(0, 1000000);
     const message = `${productId}${deviceName};${rand};${time}`;
     const sign = crypto.HmacSHA1(message, deviceSecret);
-
-    this.client?.publish(this.gatewayUpTopic, JSON.stringify({
-      "type": "bind",
-      "payload": {
-        "devices": [
-          {
-            "product_id": productId,
-            "device_name": deviceName,
-            "signature": sign.toString(crypto.enc.Base64),
-            "random": rand,
-            "timestamp": time,
-            "signmethod": "hmacsha1",
-            "authtype": "psk"
-          }
-        ]
-      }
-    }))
+    return new Promise((reslove, reject) => {
+      this.once('bind', (payload) => {
+        reslove(payload);
+      });
+      setTimeout(() => reject(new Error('Timeout')), timeout);
+      this.client?.publish(this.gatewayUpTopic, JSON.stringify({
+        "type": "bind",
+        "payload": {
+          "devices": [
+            {
+              "product_id": productId,
+              "device_name": deviceName,
+              "signature": sign.toString(crypto.enc.Base64),
+              "random": rand,
+              "timestamp": time,
+              "signmethod": "hmacsha1",
+              "authtype": "psk"
+            }
+          ]
+        }
+      }));
+    });
   }
 
   subDeviceOnline(device: Devices) {
@@ -119,4 +124,15 @@ export class GatewayDevice extends VirtualDevice {
       setTimeout(reject, timeout);
     })
   }
-}
+
+  // 获取一个 subDevice 实例
+  getSubDevice(deviceData: DeviceInfo): VirtualDevice {
+    if (!this.client) {
+      throw new Error('device not connected');
+    }
+    const subDevice = new VirtualDevice(deviceData);
+    // 复用网关的 mqtt client
+    subDevice.setMqttClient(this.client);
+    return subDevice;
+  }
+ }

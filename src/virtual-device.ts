@@ -3,6 +3,8 @@ import onSign from './utils/onSign';
 import EventEmitter from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
+import { MqttClient } from 'mqtt';
+import chalk from 'chalk';
 
 interface ReplyBody {
   code: number;
@@ -93,44 +95,8 @@ export class VirtualDevice extends EventEmitter {
       username,
       password,
     });
-    client.on('connect', params => {
-      this.emit('connect', {...params, client});
-      client.subscribe(this.propDownTopic);
-      client.subscribe(this.eventDownTopic);
-      client.subscribe(this.actionDownTopic);
-
-      client.on('message', (topic, payload) => {
-        console.log('message coming:', topic, payload.toString());
-        this.emit('message', topic, payload.toString());
-        try {
-          const { method, ...others } = JSON.parse(payload.toString());
-          switch (method) {
-            case 'control':
-              this.emit('control', others);
-              break;
-            case 'action':
-              this.emit('action', others);
-              break;
-            case 'event_reply':
-              this.emit('event_reply', others);
-              break;
-            case 'report_reply':
-              this.emit('report_reply', others);
-              break;
-            case 'get_status_reply':
-              this.emit('get_status_reply', others);
-              break;
-            default:
-              if (method) {
-                console.warn('unknown property method:', method, others);
-                this.emit(method, others);
-              }
-          }
-        } catch (err) {
-          console.warn('[handle message error]:', err);
-        }
-      });
-    });
+    this.client = client;
+    client.on('connect', this.initListeners.bind(this));
 
     client.on('error', err => {
       this.emit('error', err);
@@ -139,9 +105,59 @@ export class VirtualDevice extends EventEmitter {
     client.on('close', () => {
       this.emit('close');
     });
-
-    this.client = client;
     return client;
+  }
+
+  toString() {
+    return `[${this.productId}/${this.deviceName}]`
+  }
+
+  initListeners(params: any) {
+    const client = this.client as MqttClient;
+    this.emit('connect', {...params, client});
+    client.subscribe(this.propDownTopic);
+    client.subscribe(this.eventDownTopic);
+    client.subscribe(this.actionDownTopic);
+
+    client.on('message', (topic, payload) => {
+      console.log(chalk.blue(`${this}:`), topic, payload.toString());
+      this.emit('message', topic, payload.toString());
+      try {
+        const { method, ...others } = JSON.parse(payload.toString());
+        switch (method) {
+          case 'control':
+            this.emit('control', others);
+            break;
+          case 'action':
+            this.emit('action', others);
+            break;
+          case 'event_reply':
+            this.emit('event_reply', others);
+            break;
+          case 'report_reply':
+            this.emit('report_reply', others);
+            break;
+          case 'get_status_reply':
+            this.emit('get_status_reply', others);
+            break;
+          default:
+            if (method) {
+              console.warn('unknown property method:', method, others);
+              this.emit(method, others);
+            }
+        }
+      } catch (err) {
+        console.warn('[handle message error]:', err);
+      }
+    });
+  }
+
+
+  setMqttClient(client: MqttClient) {
+    if (this.client === null) {
+      this.client = client;
+      this.initListeners({});
+    }
   }
 
   onAction(
