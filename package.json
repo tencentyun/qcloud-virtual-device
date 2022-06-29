@@ -1,5 +1,5 @@
 {
-  "version": "0.1.1",
+  "version": "0.2.0",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -61,6 +61,7 @@
   },
   "dependencies": {
     "@types/uuid": "^8.3.4",
+    "chalk": "4",
     "crypto-js": "^4.1.1",
     "dayjs": "^1.11.1",
     "mqtt": "^4.3.7",

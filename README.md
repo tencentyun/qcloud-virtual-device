@@ -9,6 +9,8 @@ npm i qcloud-virtual-device # yarn add qcloud-virtual-device
 
 ## GET STARTED
 
+### 创建一个普通设备
+
 ```js
 const { VirtualDevice } = require('qcloud-virtual-device');
 
@@ -34,6 +36,32 @@ device.connect();
 ```
 完整例子可以参看[demo](https://github.com/tencentyun/qcloud-virtual-device/blob/main/demo/index.js);
 
+### 创建一个网关设备
+
+```js
+const { GatewayDevice } = require('qcloud-virtual-device');
+
+const device = new GatewayDevice({
+  productId: 'your_productId',
+  deviceName: 'your_device_name',
+  deviceSecret: 'your_device_secret',
+});
+
+device.on('connect', async () => {
+  // 获取网关设备下的子设备
+  const subDevices = await device.getSubDevices();
+  console.log(subDevices);
+  // 绑定一个子设备
+  device.bindSubDevice({
+    deviceName: 'dev_1',
+    productId: '1JTGFHHTR9',
+    deviceSecret: 'deviceSecret'
+  });
+});
+
+// 连接到云端
+device.connect();
+```
 ## API
 
 ### device.clientToken()
