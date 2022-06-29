@@ -64,7 +64,10 @@ export class GatewayDevice extends VirtualDevice {
     }))
   }
 
-  // https://cloud.tencent.com/document/product/634/45960
+  /**
+   * 绑定子设备
+   * @see https://cloud.tencent.com/document/product/634/45960 
+   */
   bindSubDevice(device: DeviceInfo, timeout = 3000) {
     const { deviceName, productId, deviceSecret } = device;
     const time = Math.floor(Date.now() / 1000);
@@ -95,14 +98,17 @@ export class GatewayDevice extends VirtualDevice {
     });
   }
 
+  // 上线子设备
   subDeviceOnline(device: Devices) {
     this.gatewayPublish('online', device);
   }
 
+  // 下线子设备
   subDeviceOffline(device: DeviceInfo) {
     this.gatewayPublish('offline', device);
   }
 
+  // 解绑子设备
   unbindSubDevice(devices: Devices, timeout = 3000) {
     return new Promise((resolve, reject) => {
       this.once('subDeviceUnbind', (payload) => {
@@ -112,7 +118,7 @@ export class GatewayDevice extends VirtualDevice {
       this.gatewayPublish('unbind', devices);
     });
   }
-
+  // 获取网关下的子设备信息
   getSubDevices(timeout = 3000) {
     this.client?.publish(this.gatewayUpTopic, JSON.stringify({
       "type": "describe_sub_devices"

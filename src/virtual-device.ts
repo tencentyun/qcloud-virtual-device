@@ -120,7 +120,7 @@ export class VirtualDevice extends EventEmitter {
     client.subscribe(this.actionDownTopic);
 
     client.on('message', (topic, payload) => {
-      console.log(chalk.blue(`${this}:`), topic, payload.toString());
+      console.log(chalk.blue(`${this}:`), chalk.yellow(topic), payload.toString());
       this.emit('message', topic, payload.toString());
       try {
         const { method, ...others } = JSON.parse(payload.toString());
