@@ -178,6 +178,9 @@ export class VirtualDevice extends EventEmitter {
         case 'report_version_rsp':
           this.emit('report_version_rsp', others);
           break;
+        case 'update_firmware':
+          this.emit('update_firmware', others);
+          break;
       }
     } catch (err) {
       console.warn('[handle message error]:', err, topic);
