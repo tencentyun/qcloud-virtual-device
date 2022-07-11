@@ -77,6 +77,12 @@ export class VirtualDevice extends EventEmitter {
   get actionUpTopic() {
     return `$thing/up/action/${this.productId}/${this.deviceName}`;
   }
+  get otaUpTopic() {
+    return `$ota/report/${this.productId}/${this.deviceName}`;
+  }
+  get otaDownTopic() {
+    return `$ota/update/${this.productId}/${this.deviceName}`;
+  }
 
   connect(
     url?: string,
@@ -118,38 +124,67 @@ export class VirtualDevice extends EventEmitter {
     client.subscribe(this.propDownTopic);
     client.subscribe(this.eventDownTopic);
     client.subscribe(this.actionDownTopic);
+    client.subscribe(this.otaDownTopic);
 
     client.on('message', (topic, payload) => {
       console.log(chalk.blue(`${this}:`), chalk.yellow(topic), payload.toString());
       this.emit('message', topic, payload.toString());
-      try {
-        const { method, ...others } = JSON.parse(payload.toString());
-        switch (method) {
-          case 'control':
-            this.emit('control', others);
-            break;
-          case 'action':
-            this.emit('action', others);
-            break;
-          case 'event_reply':
-            this.emit('event_reply', others);
-            break;
-          case 'report_reply':
-            this.emit('report_reply', others);
-            break;
-          case 'get_status_reply':
-            this.emit('get_status_reply', others);
-            break;
-          default:
-            if (method) {
-              console.warn('unknown property method:', method, others);
-              this.emit(method, others);
-            }
-        }
-      } catch (err) {
-        console.warn('[handle message error]:', err);
+      switch (topic) {
+        case this.actionDownTopic:
+        case this.propDownTopic:
+        case this.eventDownTopic:
+          this.handleThings(payload, topic);
+          break;
+        case this.otaDownTopic:
+          this.handleOtaMessage(payload, topic);
       }
     });
+  }
+
+  private handleThings(payload: Buffer, topic: string) {
+    try {
+      const { method, ...others } = JSON.parse(payload.toString());
+      switch (method) {
+        case 'control':
+          this.emit('control', others);
+          break;
+        case 'action':
+          this.emit('action', others);
+          break;
+        case 'event_reply':
+          this.emit('event_reply', others);
+          break;
+        case 'report_reply':
+          this.emit('report_reply', others);
+          break;
+        case 'get_status_reply':
+          this.emit('get_status_reply', others);
+          break;
+        default:
+          if (method) {
+            console.warn('unknown property method:', method, others);
+            this.emit(method, others);
+          }
+      }
+    } catch (err) {
+      console.warn('[handle message error]:', err, topic);
+    }
+  }
+
+  private handleOtaMessage(payload: Buffer, topic: string) {
+    try {
+      const { type, ...others } = JSON.parse(payload.toString());
+      switch (type) {
+        case 'report_version_rsp':
+          this.emit('report_version_rsp', others);
+          break;
+        case 'update_firmware':
+          this.emit('update_firmware', others);
+          break;
+      }
+    } catch (err) {
+      console.warn('[handle message error]:', err, topic);
+    }
   }
 
 
@@ -271,6 +306,20 @@ export class VirtualDevice extends EventEmitter {
         })
       );
     });
+  }
+
+  // 上报设备的固件版本
+  reportVersion(version: string, timeout = 3000) {
+    return new Promise((resolve, reject) => {
+      this.once('report_version_rsp', (res) => resolve(res));
+      setTimeout(reject, timeout);
+      this.client?.publish(this.otaUpTopic, JSON.stringify({
+        "type": "report_version",
+        "report":{
+            "version": version
+        }
+      }));
+    })
   }
 
   reportInfo(payload: Record<string, any>) {
